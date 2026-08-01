@@ -457,7 +457,14 @@ body.font-lg .sidebar details.hint .hint-body { font-size: 13px; }
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 14px; gap: 10px;
   flex-shrink: 0;
+  /* Im Hochformat kann die Leiste breiter als der Bildschirm sein → horizontal scrollbar */
+  overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.canvas-toolbar::-webkit-scrollbar { display: none; }
+/* Chips nicht stauchen, damit sie überlaufen und scrollbar werden (der flex:1-Spacer
+   behält seine Inline-Regel und schrumpft weiterhin, wenn die Leiste passt). */
+.canvas-toolbar > * { flex-shrink: 0; }
 .tbar-label { font-family:var(--font-mono); font-size: 11px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
 .tbar-chip {
   height: 32px; padding: 0 14px; border-radius: 20px;

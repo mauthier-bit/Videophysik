@@ -600,9 +600,11 @@ body.font-lg .sidebar details.hint .hint-body { font-size: 13px; }
   text-transform: uppercase; color: var(--accent); margin-bottom: 16px;
 }
 .modal-video {
-  width: 100%; aspect-ratio: 16/9; background: #000;
-  border-radius: 10px; display: block; margin-bottom: 14px;
-  object-fit: cover;
+  /* Vorschau zeigt das echte Seitenverhältnis des Streams (kein Zuschnitt) – WYSIWYG,
+     auch im Hochformat. object-fit:contain letterboxt statt zu schneiden. */
+  width: 100%; height: auto; max-height: 66vh; background: #000;
+  border-radius: 10px; display: block; margin: 0 auto 14px;
+  object-fit: contain;
 }
 .modal-btns { display: flex; gap: 10px; }
 .modal-close {
@@ -1747,8 +1749,8 @@ function dismissQLBanner() {
       Bitte verwenden Sie ein <strong>Stativ</strong>, damit die Kamera während der Aufnahme ruhig bleibt.
       <div style="margin-top:10px;font-size:18px;margin-bottom:8px;">🎨 Hoher Kontrast</div>
       Achten Sie auf einen <strong>hohen Kontrast</strong> zwischen dem bewegten Objekt und dem Hintergrund.
-      <div style="margin-top:10px;font-size:18px;margin-bottom:8px;">📱 Querformat empfohlen</div>
-      Bitte nehmen Sie möglichst im <strong>Querformat</strong> auf — das entspricht dem Format der App und des Ausdrucks. Videos im <strong>Hochformat</strong> können im Tab VIDEO nachträglich mit dem <strong>↻ Drehen-Button</strong> gedreht werden und stehen dann für alle weiteren Auswertungen zur Verfügung.
+      <div style="margin-top:10px;font-size:18px;margin-bottom:8px;">📱 Hoch- oder Querformat</div>
+      <strong>Beide Formate</strong> sind möglich – die Vorschau zeigt genau den späteren Bildausschnitt, es wird nichts abgeschnitten. Ein Hochformat-Video wird beim <strong>Drucken</strong> automatisch ins Querformat gedreht.
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;cursor:pointer;"
          onclick="toggleCameraHintCheck()">
@@ -1772,7 +1774,7 @@ function dismissQLBanner() {
 
 <!-- ═══ Camera Modal ═══ -->
 <div class="modal-overlay" id="cameraModal">
-  <div class="modal">
+  <div class="modal" style="max-width:1040px;">
     <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
       <span>Kameraaufnahme</span>
       <button id="btnSwitchCam" onclick="switchCamera()"
@@ -6803,8 +6805,8 @@ async function printImage(mode) {
 
   // Create composite canvas
   const src = strobeCanvas;
-  const W = src.width, H = src.height;
-  const comp = document.createElement('canvas');
+  let W = src.width, H = src.height;
+  let comp = document.createElement('canvas');
   comp.width = W; comp.height = H;
   const ctx = comp.getContext('2d');
 
@@ -6854,6 +6856,21 @@ async function printImage(mode) {
       img.onerror = res;
       img.src = svgUrl;
     });
+  }
+
+  // Hochformat-Bild für den Ausdruck automatisch um 90° ins Querformat drehen –
+  // so wird die A4-Querformat-Breite gut ausgenutzt und ein glatter Maßstab möglich.
+  // (Der Maßstab in px bleibt dabei unverändert; ein bereits per „Drehen" ins Querformat
+  // gebrachtes Bild löst dies nicht aus, da dann W ≥ H.)
+  if (H > W) {
+    const rc = document.createElement('canvas');
+    rc.width = H; rc.height = W;
+    const rctx = rc.getContext('2d');
+    rctx.translate(H / 2, W / 2);
+    rctx.rotate(Math.PI / 2);            // 90° im Uhrzeigersinn
+    rctx.drawImage(comp, -W / 2, -H / 2);
+    comp = rc;
+    const tmp = W; W = H; H = tmp;        // Dimensionen für die weitere Layout-Rechnung tauschen
   }
 
   // ── Compute exact print size so scale is accurate ──
@@ -8117,7 +8134,7 @@ if (!localStorage.getItem('vpHelpSeen')) { window.addEventListener('load', () =>
         <div style="display:flex;gap:12px;align-items:flex-start;">
           <div style="min-width:26px;height:26px;border-radius:50%;background:rgba(26,86,204,.15);border:1px solid rgba(26,86,204,.4);color:var(--accent);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:ui-monospace,monospace;flex-shrink:0;">1</div>
           <div><div style="color:var(--text);font-size:13px;font-weight:600;margin-bottom:2px;">Tab VIDEO</div>
-          <div style="color:var(--text2);font-size:12px;line-height:1.5;">Video importieren oder mit der Kamera aufnehmen. Bitte möglichst im <b style="color:var(--text);">Querformat</b> aufnehmen. Videos im <b style="color:var(--text);">Hochformat</b> können im Tab VIDEO mit dem <b style="color:var(--text);">↻ Drehen-Button</b> um 90° gedreht werden — das gedrehte bzw. mit <b style="color:var(--text);">⇔ Spiegeln</b> gespiegelte Video ist dann Grundlage für alle weiteren Auswertungen (Stroboskop, Messen, Tracking). Auflösung und Dauer des Videos werden unten in der Statusleiste angezeigt.<br><br>
+          <div style="color:var(--text2);font-size:12px;line-height:1.5;">Video importieren oder mit der Kamera aufnehmen — <b style="color:var(--text);">Hoch- und Querformat</b> sind gleichermaßen möglich, es wird nichts abgeschnitten. Ein im <b style="color:var(--text);">Hochformat</b> aufgenommenes Video ergibt ein Hochformat-Stroboskopbild; dieses wird <b style="color:var(--text);">beim Drucken automatisch um 90° ins Querformat gedreht</b>, damit das A4-Blatt gut ausgenutzt wird und ein glatter Maßstab entsteht. Mit <b style="color:var(--text);">⇔ Spiegeln</b> lässt sich das Video bei Bedarf spiegeln. Auflösung und Dauer des Videos werden unten in der Statusleiste angezeigt.<br><br>
           <b style="color:var(--text);">Ausschnitt:</b> Blendet im Zeit-Slider unter dem Video zwei <b style="color:var(--text);">Grenzmarken</b> ein. Nur der Bereich dazwischen wird abgespielt – praktisch, wenn die eigentliche Bewegung z. B. erst nach 3 s beginnt und einige Sekunden vor Videoende endet. Die Marken lassen sich direkt im Zeit-Slider (Video-Ansicht) verschieben; die Wiedergabe startet dann an der Anfangsmarke und stoppt an der Endmarke. (Der Bereich für das Stroboskopbild wird separat im Tab <b style="color:var(--text);">Strobe</b> über Start-/Endzeit eingestellt.)</div></div>
         </div>
 
